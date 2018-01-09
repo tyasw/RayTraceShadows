@@ -25,40 +25,54 @@ import java.awt.*;
 import java.awt.event.*;
 
 public class RayTraceShadows extends Frame {
-    public static final int WIDTH = 1024;
-    public static final int HEIGHT = 1024;
-	public static Color background = new Color(0.4f, 0.6f, 0.8f);
+	public static final int WIDTH = 512;
+	public static final int HEIGHT = 512;
+	public static final Color BACKGROUND = new Color(0.4f, 0.6f, 0.8f);
+	public static final nTuple LIGHT = new nTuple(1.0f, 1.0f, 1.0f).normalize();
+	public static final nTuple LIGHT_BASIS_2 = new nTuple(5.0f, -3.0f, -2.0f).normalize();
+	public static final nTuple LIGHT_BASIS_3 = new nTuple(1.0f, 7.0f, -8.0f).normalize();
+	public static final float IMG_DIST = 10.0f;		// img plane size
+	public static final float CAM_Z = 20.0f;		// camera position 
 	public static Quadtree tree;
 	public static Quadtree shadowTree;
-	public static nTuple light;
-	public static nTuple lightBasis2;
-	public static nTuple lightBasis3;
-	public static int numSpheres;
-	public static int treeDepth = 8;	
-	public static float s = 10.0f;		// img plane size
-	public static float camZ = 20.0f;	// camera position 
 
 	public static void main(String[] args) {
-		tree = new Quadtree(-s, -s, s, s, treeDepth, camZ);
-		shadowTree = new Quadtree(-s*5, -s*5, s*5, s*5, treeDepth, camZ);
-		numSpheres = getUserParameters();
-		System.out.println("Drawing " + numSpheres + " spheres.");
-		light = new nTuple(1.0f, 1.0f, 1.0f).normalize();
-		lightBasis2 = new nTuple(5.0f, -3.0f, -2.0f).normalize();
-		lightBasis3 = new nTuple(1.0f, 7.0f, -8.0f).normalize();
+		Scanner input = new Scanner(System.in);
+		int numSpheres = howManySpheres(input);
+		int treeDepth = howDeep(input);
+		tree = new Quadtree(-IMG_DIST,
+							-IMG_DIST,
+							IMG_DIST,
+							IMG_DIST,
+							treeDepth,
+							CAM_Z);
+		shadowTree = new Quadtree(-IMG_DIST * 5,
+									-IMG_DIST * 5,
+									IMG_DIST * 5,
+									IMG_DIST * 5,
+									treeDepth,
+									CAM_Z);
+		ArrayList<Sphere> spheres = new ArrayList<Sphere>();
 
 		for (int i = 0; i < numSpheres; i++) {
-			Sphere s = randSphere(light, lightBasis2, lightBasis3);
+			Sphere s = randSphere(LIGHT, LIGHT_BASIS_2, LIGHT_BASIS_3);
 			tree.addSphere(s);
 			shadowTree.addShadowSphere(s);
+			spheres.add(s);
 		}
+
+		Statistics stats = new Statistics(spheres);
+		stats.generateUsefulInfo();
 		new RayTraceShadows();
 	}
 
-	// Let user decide number of spheres
-	public static int getUserParameters() {
-		Scanner input = new Scanner(System.in);
+	public static int howManySpheres(Scanner input) {
 		System.out.print("How many spheres do you want drawn? ");
+		return input.nextInt();
+	}
+
+	public static int howDeep(Scanner input) {
+		System.out.print("How deep do you want the quadtree to be? (Less than 10 recommended)? ");
 		return input.nextInt();
 	}
 
@@ -66,7 +80,6 @@ public class RayTraceShadows extends Frame {
 		float x = (float) Math.random() * 16.0f - 8.0f;
 		float y = (float) Math.random() * 16.0f - 8.0f;
 		float z = (float) Math.random() * 16.0f - 8.0f;
-		//float radius = 0.5f;
 		float radius = (float) Math.random() * 0.1f + 0.05f;
 		float r = (float) Math.random();
 		float g = (float) Math.random();
@@ -74,9 +87,8 @@ public class RayTraceShadows extends Frame {
 		return new Sphere(x, y, z, radius, r, g, b, u1, u2, u3);
 	}
 
-	// Find pixel color
 	public Color getColor(int x, int y) {
-		nTuple p = new nTuple(0.0f, 0.0f, camZ);	// camera point
+		nTuple p = new nTuple(0.0f, 0.0f, CAM_Z);	// camera point
 		nTuple q = imagePlaneCoord(x, y);			// point on image plane
 		ray ray = new ray(p, q.subtract(p));
 		double closestHit = Double.POSITIVE_INFINITY;
@@ -97,17 +109,20 @@ public class RayTraceShadows extends Frame {
 		if (closestSphere != null) {
 			nTuple IntPt = ray.pointAlongRay((float) closestHit);
 			boolean inShadow = inShadow(IntPt);
-			return closestSphere.shadeSphere(IntPt, light, inShadow);
+			return closestSphere.shadeSphere(IntPt, LIGHT, inShadow);
 		} else {
-			return background;
+			return BACKGROUND;
 		}
 	}
 
 	// Check if a point on a sphere is in shadow
 	public boolean inShadow(nTuple point) {
-		nTuple coords = new nTuple(point.coordChange(light, lightBasis2, lightBasis3, point));
+		nTuple coords = new nTuple(point.coordChange(LIGHT,
+														LIGHT_BASIS_2,
+														LIGHT_BASIS_3,
+														point));
 		SphereList shadowIntersect = shadowTree.getSpheres(coords.getY(), coords.getZ()); 
-		ray shadowRay = new ray(new nTuple(), light);	// terminal at origin makes math easier
+		ray shadowRay = new ray(new nTuple(), LIGHT);	// terminal at origin makes math easier
 		boolean inShadow = false;
 		while (!inShadow && (shadowIntersect != null)) {
 			Sphere next = new Sphere(shadowIntersect.getSphere());
@@ -122,12 +137,10 @@ public class RayTraceShadows extends Frame {
 	}
 
 	public nTuple imagePlaneCoord(float u, float v) {
-		return new nTuple(this.s * (2*u/(float)WIDTH - 1), -1.0f * this.s * (2*v/(float)HEIGHT - 1), 0.0f);
+		return new nTuple(this.IMG_DIST * (2*u/(float)WIDTH - 1),
+							-1.0f * this.IMG_DIST * (2*v/(float)HEIGHT - 1),
+							0.0f);
 	}
-
-    /**
-     * Instantiates an RayTraceShadows object.
-     **/
 
     /**
      * Our RayTraceShadows constructor sets the frame's size, adds the
@@ -136,19 +149,9 @@ public class RayTraceShadows extends Frame {
      * the frame.
      **/
     public RayTraceShadows() {
-        //Title our frame.
         super("RayTracer");
-
-        //Set the size for the frame.
         setSize(WIDTH, HEIGHT);
-
-        //We need to turn on the visibility of our frame
-        //by setting the Visible parameter to true.
         setVisible(true);
-
-        //Now, we want to be sure we properly dispose of resources
-        //this frame is using when the window is closed.  We use
-        //an anonymous inner class adapter for this.
         addWindowListener(new WindowAdapter()
                           {public void windowClosing(WindowEvent e)
                           {dispose(); System.exit(0);}
@@ -156,16 +159,6 @@ public class RayTraceShadows extends Frame {
         );
     }
 
-    public int getWIDTH() { return this.WIDTH; }
-
-    public int getHEIGHT() { return this.HEIGHT; }
-
-    /**
-     * The paint method provides the real magic.  Here we
-     * cast the Graphics object to Graphics2D to illustrate
-     * that we may use the same old graphics capabilities with
-     * Graphics2D that we are used to using with Graphics.
-     **/
     public void paint(Graphics g) {
 		for (int u = 0; u < WIDTH; u++) {
 			for (int v = 0; v < HEIGHT; v++) {
