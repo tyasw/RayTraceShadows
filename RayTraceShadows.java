@@ -25,40 +25,45 @@ import java.awt.*;
 import java.awt.event.*;
 
 public class RayTraceShadows extends Frame {
-    public static final int WIDTH = 1024;
-    public static final int HEIGHT = 1024;
-	public static Color background = new Color(0.4f, 0.6f, 0.8f);
+	public static final int WIDTH = 512;
+	public static final int HEIGHT = 512;
+	public static final Color background = new Color(0.4f, 0.6f, 0.8f);
+	public static final nTuple light = new nTuple(1.0f, 1.0f, 1.0f).normalize();
+	public static final nTuple lightBasis2 = new nTuple(5.0f, -3.0f, -2.0f).normalize();
+	public static final nTuple lightBasis3 = new nTuple(1.0f, 7.0f, -8.0f).normalize();
+	public static final float s = 10.0f;		// img plane size
+	public static final float camZ = 20.0f;		// camera position 
 	public static Quadtree tree;
 	public static Quadtree shadowTree;
-	public static nTuple light;
-	public static nTuple lightBasis2;
-	public static nTuple lightBasis3;
-	public static int numSpheres;
-	public static int treeDepth = 8;	
-	public static float s = 10.0f;		// img plane size
-	public static float camZ = 20.0f;	// camera position 
+	public static int TREE_DEPTH;
 
 	public static void main(String[] args) {
-		tree = new Quadtree(-s, -s, s, s, treeDepth, camZ);
-		shadowTree = new Quadtree(-s*5, -s*5, s*5, s*5, treeDepth, camZ);
-		numSpheres = getUserParameters();
-		System.out.println("Drawing " + numSpheres + " spheres.");
-		light = new nTuple(1.0f, 1.0f, 1.0f).normalize();
-		lightBasis2 = new nTuple(5.0f, -3.0f, -2.0f).normalize();
-		lightBasis3 = new nTuple(1.0f, 7.0f, -8.0f).normalize();
+		Scanner input = new Scanner(System.in);
+		int numSpheres = howManySpheres(input);
+		TREE_DEPTH = howDeep(input);
+		tree = new Quadtree(-s, -s, s, s, TREE_DEPTH, camZ);
+		shadowTree = new Quadtree(-s*5, -s*5, s*5, s*5, TREE_DEPTH, camZ);
+		ArrayList<Sphere> spheres = new ArrayList<Sphere>();
 
 		for (int i = 0; i < numSpheres; i++) {
 			Sphere s = randSphere(light, lightBasis2, lightBasis3);
 			tree.addSphere(s);
 			shadowTree.addShadowSphere(s);
+			spheres.add(s);
 		}
+
+		Statistics stats = new Statistics(spheres);
+		stats.generateUsefulInfo();
 		new RayTraceShadows();
 	}
 
-	// Let user decide number of spheres
-	public static int getUserParameters() {
-		Scanner input = new Scanner(System.in);
+	public static int howManySpheres(Scanner input) {
 		System.out.print("How many spheres do you want drawn? ");
+		return input.nextInt();
+	}
+
+	public static int howDeep(Scanner input) {
+		System.out.print("How deep do you want the quadtree to be? (Less than 10 recommended)? ");
 		return input.nextInt();
 	}
 
@@ -66,7 +71,6 @@ public class RayTraceShadows extends Frame {
 		float x = (float) Math.random() * 16.0f - 8.0f;
 		float y = (float) Math.random() * 16.0f - 8.0f;
 		float z = (float) Math.random() * 16.0f - 8.0f;
-		//float radius = 0.5f;
 		float radius = (float) Math.random() * 0.1f + 0.05f;
 		float r = (float) Math.random();
 		float g = (float) Math.random();
@@ -74,7 +78,6 @@ public class RayTraceShadows extends Frame {
 		return new Sphere(x, y, z, radius, r, g, b, u1, u2, u3);
 	}
 
-	// Find pixel color
 	public Color getColor(int x, int y) {
 		nTuple p = new nTuple(0.0f, 0.0f, camZ);	// camera point
 		nTuple q = imagePlaneCoord(x, y);			// point on image plane
@@ -126,29 +129,15 @@ public class RayTraceShadows extends Frame {
 	}
 
     /**
-     * Instantiates an RayTraceShadows object.
-     **/
-
-    /**
      * Our RayTraceShadows constructor sets the frame's size, adds the
      * visual components, and then makes them visible to the user.
      * It uses an adapter class to deal with the user closing
      * the frame.
      **/
     public RayTraceShadows() {
-        //Title our frame.
         super("RayTracer");
-
-        //Set the size for the frame.
         setSize(WIDTH, HEIGHT);
-
-        //We need to turn on the visibility of our frame
-        //by setting the Visible parameter to true.
         setVisible(true);
-
-        //Now, we want to be sure we properly dispose of resources
-        //this frame is using when the window is closed.  We use
-        //an anonymous inner class adapter for this.
         addWindowListener(new WindowAdapter()
                           {public void windowClosing(WindowEvent e)
                           {dispose(); System.exit(0);}
@@ -156,16 +145,6 @@ public class RayTraceShadows extends Frame {
         );
     }
 
-    public int getWIDTH() { return this.WIDTH; }
-
-    public int getHEIGHT() { return this.HEIGHT; }
-
-    /**
-     * The paint method provides the real magic.  Here we
-     * cast the Graphics object to Graphics2D to illustrate
-     * that we may use the same old graphics capabilities with
-     * Graphics2D that we are used to using with Graphics.
-     **/
     public void paint(Graphics g) {
 		for (int u = 0; u < WIDTH; u++) {
 			for (int v = 0; v < HEIGHT; v++) {
