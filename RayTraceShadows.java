@@ -31,25 +31,28 @@ public class RayTraceShadows extends Frame {
 	public static final nTuple LIGHT = new nTuple(1.0f, 1.0f, 1.0f).normalize();
 	public static final nTuple LIGHT_BASIS_2 = new nTuple(5.0f, -3.0f, -2.0f).normalize();
 	public static final nTuple LIGHT_BASIS_3 = new nTuple(1.0f, 7.0f, -8.0f).normalize();
-	public static final float IMG_DIST = 10.0f;		// img plane size
-	public static final float CAM_Z = 20.0f;		// camera position 
+	public static final float IMG_PLANE_SZ = 10.0f;
+	public static final float CAM_Z = 20.0f;
 	public static Quadtree tree;
 	public static Quadtree shadowTree;
 
+	/*
+	 * Main entry point
+	 */
 	public static void main(String[] args) {
 		Scanner input = new Scanner(System.in);
 		int numSpheres = howManySpheres(input);
 		int treeDepth = howDeep(input);
-		tree = new Quadtree(-IMG_DIST,
-							-IMG_DIST,
-							IMG_DIST,
-							IMG_DIST,
+		tree = new Quadtree(-IMG_PLANE_SZ,
+							-IMG_PLANE_SZ,
+							IMG_PLANE_SZ,
+							IMG_PLANE_SZ,
 							treeDepth,
 							CAM_Z);
-		shadowTree = new Quadtree(-IMG_DIST * 5,
-									-IMG_DIST * 5,
-									IMG_DIST * 5,
-									IMG_DIST * 5,
+		shadowTree = new Quadtree(-IMG_PLANE_SZ * 5,
+									-IMG_PLANE_SZ * 5,
+									IMG_PLANE_SZ * 5,
+									IMG_PLANE_SZ * 5,
 									treeDepth,
 									CAM_Z);
 		ArrayList<Sphere> spheres = new ArrayList<Sphere>();
@@ -137,8 +140,8 @@ public class RayTraceShadows extends Frame {
 	}
 
 	public nTuple imagePlaneCoord(float u, float v) {
-		return new nTuple(this.IMG_DIST * (2*u/(float)WIDTH - 1),
-							-1.0f * this.IMG_DIST * (2*v/(float)HEIGHT - 1),
+		return new nTuple(this.IMG_PLANE_SZ * (2*u/(float)WIDTH - 1),
+							-1.0f * this.IMG_PLANE_SZ * (2*v/(float)HEIGHT - 1),
 							0.0f);
 	}
 

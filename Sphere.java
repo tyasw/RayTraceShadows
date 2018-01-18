@@ -22,16 +22,19 @@ public class Sphere {
 
 	public nTuple getColor() { return this.color; }
 
-	public void print() {
-		System.out.println("Center: (" + this.center.getX() + ", " + this.center.getY() + ", " + this.center.getZ() + ")");
-		System.out.println("Radius: " + this.radius); 
-		System.out.println("Color: (" + this.color.getX() + ", " + this.color.getY() + ", " + this.color.getZ() + ")");
+	@Override
+	public String toString() {
+		return this.center.toString();
 	}
 
 	public Sphere(float x, float y, float z, float radius, float r,
-				float g, float b, nTuple lightBasis1, nTuple lightBasis2, nTuple lightBasis3) {
+				float g, float b, nTuple lightBasis1, nTuple lightBasis2,
+				nTuple lightBasis3) {
 		this.center = new nTuple(x, y, z);
-		this.center_shadow = this.center.coordChange(lightBasis1, lightBasis2, lightBasis3, this.center); 
+		this.center_shadow = this.center.coordChange(lightBasis1,
+														lightBasis2,
+														lightBasis3,
+														this.center);
 		this.radius = radius;
 		this.color = new nTuple(r, g, b);
 	}
@@ -61,48 +64,7 @@ public class Sphere {
 		this.color.setNTuple(newColor);
 	}
 
-	public void reflectXY() {
-		this.center.setNTuple(this.center.reflectXY());
-	}
-
-	public void reflectXZ() {
-		this.center.setNTuple(this.center.reflectXZ());
-	}
-
-	public void reflectYZ() {
-		this.center.setNTuple(this.center.reflectYZ());
-	}
-
-	public void projectXY() {
-		this.center.setNTuple(this.center.projectXY());
-	}
-
-	public void projectXZ() {
-		this.center.setNTuple(this.center.projectXZ());
-	}
-
-	public void projectYZ() {
-		this.center.setNTuple(this.center.projectYZ());
-	}
-
-	public void rotateX(float angle) {
-		this.center.setNTuple(this.center.rotateX(angle));
-	}
-
-	public void rotateY(float angle) {
-		this.center.setNTuple(this.center.rotateY(angle));
-	}
-
-	public void rotateZ(float angle) {
-		this.center.setNTuple(this.center.rotateZ(angle));
-	}
-
-	public void rotateAxis(nTuple unit, float angle) {
-		this.center.setNTuple(this.center.rotateAxis(unit, angle));
-	}
-
 	public Color shadeSphere(nTuple point, nTuple light, boolean inShadow) {
-		//return new Color(this.color.getX(), this.color.getY(), this.color.getZ());
 		return lambertian(point, light, inShadow);
 	}
 
@@ -116,6 +78,8 @@ public class Sphere {
 				cosVectors = ambFactor;
 			}
 		}
-		return new Color(cosVectors * this.color.getX(), cosVectors * this.color.getY(), cosVectors * this.color.getZ());
+		return new Color(cosVectors * this.color.getX(),
+							cosVectors * this.color.getY(),
+							cosVectors * this.color.getZ());
 	}
 }
